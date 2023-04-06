@@ -1,11 +1,10 @@
 from typing import Optional
 
-from kubernetes import client
-
 from feast.infra.materialization.batch_materialization_engine import (
     MaterializationJob,
     MaterializationJobStatus,
 )
+from kubernetes import client
 
 
 class BytewaxMaterializationJob(MaterializationJob):
@@ -35,13 +34,22 @@ class BytewaxMaterializationJob(MaterializationJob):
             if job_status.active is not None:
                 if job_status.completion_time is None:
                     return MaterializationJobStatus.RUNNING
-            elif job_status.failed is not None:
-                self._error = Exception(f"Job {self.job_id()} failed")
-                return MaterializationJobStatus.ERROR
-            elif job_status.active is None:
-                if job_status.completion_time is not None:
-                    if job_status.conditions[0].type == "Complete":
-                        return MaterializationJobStatus.SUCCEEDED
+            else:
+                if (
+                    job_status.completion_time is not None
+                    and job_status.conditions[0].type == "Complete"
+                ):
+                    return MaterializationJobStatus.SUCCEEDED
+
+                if (
+                    job_status.conditions is not None
+                    and job_status.conditions[0].type == "Failed"
+                ):
+                    self._error = Exception(
+                        f"Job {self.job_id()} failed with reason: "
+                        f"{job_status.conditions[0].message}"
+                    )
+                    return MaterializationJobStatus.ERROR
                 return MaterializationJobStatus.WAITING
 
     def should_be_retried(self):
