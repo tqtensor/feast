@@ -9,7 +9,6 @@ from bytewax.dataflow import Dataflow  # type: ignore
 from bytewax.execution import cluster_main
 from bytewax.inputs import ManualInputConfig
 from bytewax.outputs import ManualOutputConfig
-
 from feast import FeatureStore, FeatureView, RepoConfig
 from feast.utils import _convert_arrow_to_proto, _run_pyarrow_field_mapping
 
@@ -40,6 +39,7 @@ class BytewaxMaterializationDataflow:
     def process_path(self, path):
         logger.info(f"Processing path {path}")
         dataset = pq.ParquetDataset(path, use_legacy_dataset=False)
+        dataset
         batches = []
         for fragment in dataset.fragments:
             for batch in fragment.to_table().to_batches(
