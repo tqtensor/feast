@@ -428,12 +428,15 @@ def _python_value_to_proto_value(
                 for value in values
             ]
         if feast_value_type in PYTHON_SCALAR_VALUE_TYPE_TO_PROTO_VALUE:
-            return [
-                ProtoValue(**{field_name: func(value)})
-                if not pd.isnull(value)
-                else ProtoValue()
-                for value in values
-            ]
+            out = []
+            for value in values:
+                if isinstance(value, ProtoValue):
+                    out.append(value)
+                elif not pd.isnull(value):
+                    out.append(ProtoValue(**{field_name: func(value)}))
+                else:
+                    out.append(ProtoValue())
+            return out
 
     raise Exception(f"Unsupported data type: ${str(type(values[0]))}")
 

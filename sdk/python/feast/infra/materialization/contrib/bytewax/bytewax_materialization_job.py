@@ -44,6 +44,12 @@ class BytewaxMaterializationJob(MaterializationJob):
                         return MaterializationJobStatus.SUCCEEDED
                 return MaterializationJobStatus.WAITING
 
+    def cancel(self):
+        self.batch_v1.delete_namespaced_job(
+            self.job_id(),
+            self.namespace,
+        )
+
     def should_be_retried(self):
         return False
 

@@ -1,4 +1,5 @@
 import json
+import threading
 import traceback
 import warnings
 from typing import List, Optional
@@ -48,9 +49,32 @@ def get_app(store: "feast.FeatureStore"):
     proto_json.patch()
 
     app = FastAPI()
+    # Asynchronously refresh registry, notifying shutdown and canceling the active timer if the app is shutting down
+    registry_proto = None
+    shutting_down = False
+    active_timer: Optional[threading.Timer] = None
 
     async def get_body(request: Request):
         return await request.body()
+
+    def async_refresh():
+        store.refresh_registry()
+        nonlocal registry_proto
+        registry_proto = store.registry.proto()
+        if shutting_down:
+            return
+        nonlocal active_timer
+        active_timer = threading.Timer(120, async_refresh)
+        active_timer.start()
+
+    @app.on_event("shutdown")
+    def shutdown_event():
+        nonlocal shutting_down
+        shutting_down = True
+        if active_timer:
+            active_timer.cancel()
+
+    async_refresh()
 
     @app.post("/get-online-features")
     def get_online_features(body=Depends(get_body)):
