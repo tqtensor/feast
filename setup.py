@@ -149,9 +149,7 @@ GRPCIO_REQUIRED = [
     "grpcio-health-checking>=1.56.2,<2",
 ]
 
-DUCKDB_REQUIRED = [
-    "ibis-framework[duckdb]"
-]
+DUCKDB_REQUIRED = ["ibis-framework[duckdb]"]
 
 CI_REQUIRED = (
     [
@@ -382,7 +380,7 @@ setup(
         "grpcio": GRPCIO_REQUIRED,
         "rockset": ROCKSET_REQUIRED,
         "ibis": IBIS_REQUIRED,
-        "duckdb": DUCKDB_REQUIRED
+        "duckdb": DUCKDB_REQUIRED,
     },
     include_package_data=True,
     license="Apache",

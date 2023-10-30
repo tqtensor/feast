@@ -50,7 +50,7 @@ class HbaseOnlineStore(OnlineStore):
 
     _conn: ConnectionPool = None
 
-    def _get_conn(self, config: RepoConfig):
+    def _get_conn(self, config: RepoConfig) -> ConnectionPool:
         """
         Get or Create Hbase Connection from Repoconfig.
 

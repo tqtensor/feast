@@ -420,3 +420,13 @@ class PushSourceNotFoundException(Exception):
 class ReadOnlyRegistryException(Exception):
     def __init__(self):
         super().__init__("Registry implementation is read-only.")
+
+
+class BytewaxJobIsStillRunning(Exception):
+    def __init__(self, job_id):
+        super().__init__(f"The Bytewax job with ID '{job_id}' is still running.")
+
+
+class BytewaxJobCancelled(Exception):
+    def __init__(self, job_id):
+        super().__init__(f"The Bytewax job with ID '{job_id}' was cancelled")

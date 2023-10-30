@@ -243,14 +243,16 @@ class FeatureStore:
         ]
 
     @log_exceptions_and_usage
-    def list_feature_services(self) -> List[FeatureService]:
+    def list_feature_services(self, allow_cache: bool = False) -> List[FeatureService]:
         """
         Retrieves the list of feature services from the registry.
 
         Returns:
             A list of feature services.
         """
-        return self._registry.list_feature_services(self.project)
+        return self._registry.list_feature_services(
+            self.project, allow_cache=allow_cache
+        )
 
     @log_exceptions_and_usage
     def list_feature_views(self, allow_cache: bool = False) -> List[FeatureView]:

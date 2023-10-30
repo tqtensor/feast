@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import tempfile
 import uuid
 from datetime import date, datetime, timedelta
@@ -66,6 +67,11 @@ except ImportError as e:
     from feast.errors import FeastExtrasDependencyImportError
 
     raise FeastExtrasDependencyImportError("gcp", str(e))
+
+
+logger = logging.getLogger(__name__)
+
+LABEL = "/*dag_name:plato_feature_retrieval*/\n"
 
 
 def get_http_client_info():
@@ -146,7 +152,10 @@ class BigQueryOfflineStore(OfflineStore):
             project=project_id,
             location=config.offline_store.location,
         )
-        query = f"""
+        query = (
+            LABEL
+            + f"""
+            CREATE OR REPLACE TABLE __desttable__ AS
             SELECT
                 {field_string}
                 {f", {repr(DUMMY_ENTITY_VAL)} AS {DUMMY_ENTITY_ID}" if not join_key_columns else ""}
@@ -158,6 +167,7 @@ class BigQueryOfflineStore(OfflineStore):
             )
             WHERE _feast_row = 1
             """
+        )
 
         # When materializing a single feature view, we don't need full feature names. On demand transforms aren't materialized
         return BigQueryRetrievalJob(
@@ -191,11 +201,14 @@ class BigQueryOfflineStore(OfflineStore):
         field_string = ", ".join(
             join_key_columns + feature_name_columns + [timestamp_field]
         )
-        query = f"""
+        query = (
+            LABEL
+            + f"""
             SELECT {field_string}
             FROM {from_expression}
             WHERE {timestamp_field} BETWEEN TIMESTAMP('{start_date}') AND TIMESTAMP('{end_date}')
         """
+        )
         return BigQueryRetrievalJob(
             query=query,
             client=client,
@@ -510,7 +523,7 @@ class BigQueryRetrievalJob(RetrievalJob):
                 self.to_df(), job_config.destination
             )
             job.result()
-            print(f"Done writing to '{job_config.destination}'.")
+            logger.info(f"Done writing to '{job_config.destination}'.")
             return str(job_config.destination)
 
         with self._query_generator() as query:
@@ -518,19 +531,10 @@ class BigQueryRetrievalJob(RetrievalJob):
             # because setting destination for scripts is not valid
             # remove destination attribute if provided
             job_config.destination = None
-            bq_job = self._execute_query(query, job_config, timeout)
+            query = query.replace("__desttable__", str(dest))
+            self._execute_query(query, job_config, timeout)
 
-            if not job_config.dry_run:
-                config = bq_job.to_api_repr()["configuration"]
-                # get temp table created by BQ
-                tmp_dest = config["query"]["destinationTable"]
-                temp_dest_table = f"{tmp_dest['projectId']}.{tmp_dest['datasetId']}.{tmp_dest['tableId']}"
-
-                # persist temp table
-                sql = f"CREATE TABLE `{dest}` AS SELECT * FROM `{temp_dest_table}`"
-                self._execute_query(sql, timeout=timeout)
-
-            print(f"Done writing to '{dest}'.")
+            logger.info(f"Done writing to '{dest}'.")
             return str(dest)
 
     def _to_arrow_internal(self, timeout: Optional[int] = None) -> pyarrow.Table:
@@ -543,7 +547,16 @@ class BigQueryRetrievalJob(RetrievalJob):
     def _execute_query(
         self, query, job_config=None, timeout: Optional[int] = None
     ) -> Optional[bigquery.job.query.QueryJob]:
-        bq_job = self.client.query(query, job_config=job_config)
+        if "__desttable__" in query:
+            today = date.today().strftime("%Y%m%d")
+            rand_id = str(uuid.uuid4())[:7]
+            if self.config.offline_store.billing_project_id:
+                path = f"{self.config.offline_store.project_id}.{self.config.offline_store.dataset}.historical_{today}_{rand_id}"
+            else:
+                path = f"{self.client.project}.{self.config.offline_store.dataset}.historical_{today}_{rand_id}"
+            query = query.replace("__desttable__", path)
+
+        bq_job = self.client.query(LABEL + query, job_config=job_config)
 
         if job_config and job_config.dry_run:
             print(
@@ -692,7 +705,7 @@ def _upload_entity_df(
     job: Union[bigquery.job.query.QueryJob, bigquery.job.load.LoadJob]
 
     if isinstance(entity_df, str):
-        job = client.query(f"CREATE TABLE `{table_name}` AS ({entity_df})")
+        job = client.query(LABEL + f"CREATE TABLE `{table_name}` AS ({entity_df})")
 
     elif isinstance(entity_df, pd.DataFrame):
         # Drop the index so that we don't have unnecessary columns
@@ -716,7 +729,9 @@ def _get_entity_schema(
 ) -> Dict[str, np.dtype]:
     if isinstance(entity_df, str):
         entity_df_sample = (
-            client.query(f"SELECT * FROM ({entity_df}) LIMIT 0").result().to_dataframe()
+            client.query(LABEL + f"SELECT * FROM ({entity_df}) LIMIT 0")
+            .result()
+            .to_dataframe()
         )
 
         entity_schema = dict(zip(entity_df_sample.columns, entity_df_sample.dtypes))
@@ -735,6 +750,7 @@ def _get_entity_df_event_timestamp_range(
 ) -> Tuple[datetime, datetime]:
     if type(entity_df) is str:
         job = client.query(
+            f"{LABEL}"
             f"SELECT MIN({entity_df_event_timestamp_col}) AS min, MAX({entity_df_event_timestamp_col}) AS max "
             f"FROM ({entity_df})"
         )
@@ -970,17 +986,19 @@ CREATE TEMP TABLE {{ featureview.name }}__cleaned AS (
  Joins the outputs of multiple time travel joins to a single table.
  The entity_dataframe dataset being our source of truth here.
  */
-
-SELECT {{ final_output_feature_names | join(', ')}}
-FROM entity_dataframe
-{% for featureview in featureviews %}
-LEFT JOIN (
-    SELECT
-        {{featureview.name}}__entity_row_unique_id
-        {% for feature in featureview.features %}
-            ,{% if full_feature_names %}{{ featureview.name }}__{{featureview.field_mapping.get(feature, feature)}}{% else %}{{ featureview.field_mapping.get(feature, feature) }}{% endif %}
-        {% endfor %}
-    FROM {{ featureview.name }}__cleaned
-) USING ({{featureview.name}}__entity_row_unique_id)
-{% endfor %}
+CREATE OR REPLACE TABLE `__desttable__`
+AS (
+    SELECT {{ final_output_feature_names | join(', ')}}
+    FROM entity_dataframe
+    {% for featureview in featureviews %}
+    LEFT JOIN (
+        SELECT
+            {{featureview.name}}__entity_row_unique_id
+            {% for feature in featureview.features %}
+                ,{% if full_feature_names %}{{ featureview.name }}__{{featureview.field_mapping.get(feature, feature)}}{% else %}{{ featureview.field_mapping.get(feature, feature) }}{% endif %}
+            {% endfor %}
+        FROM {{ featureview.name }}__cleaned
+    ) USING ({{featureview.name}}__entity_row_unique_id)
+    {% endfor %}
+);
 """
