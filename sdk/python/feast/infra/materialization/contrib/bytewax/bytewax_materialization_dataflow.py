@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List
 
 import pyarrow as pa
@@ -12,6 +13,7 @@ from tqdm import tqdm
 from feast import FeatureStore, FeatureView, RepoConfig
 from feast.utils import _convert_arrow_to_proto, _run_pyarrow_field_mapping
 
+logger = logging.getLogger(__name__)
 DEFAULT_BATCH_SIZE = 1000
 
 
@@ -33,6 +35,7 @@ class BytewaxMaterializationDataflow:
         self._run_dataflow()
 
     def process_path(self, path):
+        logger.info(f"Processing path {path}")
         dataset = pq.ParquetDataset(path, use_legacy_dataset=False)
         batches = []
         for fragment in dataset.fragments:
