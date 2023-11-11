@@ -35,7 +35,7 @@ except ImportError:
     from distutils.command.build_py import build_py
     from distutils.core import setup
 
-NAME = "feast"
+NAME = "feastmo"
 DESCRIPTION = "Python SDK for Feast"
 URL = "https://github.com/feast-dev/feast"
 AUTHOR = "Feast"
