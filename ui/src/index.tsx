@@ -29,65 +29,65 @@ const queryClient = new QueryClient();
 
 const tabsRegistry = {
   RegularFeatureViewCustomTabs: [
-    {
-      label: "Custom Tab Demo", // Navigation Label for the tab
-      path: "demo-tab", // Subpath for the tab
-      Component: RFVDemoCustomTab,
-    },
-    {
-      label: "Data Tab Demo", // Navigation Label for the tab
-      path: "data-tab", // Subpath for the tab
-      Component: DataTab,
-    },
+    // {
+    //   label: "Custom Tab Demo", // Navigation Label for the tab
+    //   path: "demo-tab", // Subpath for the tab
+    //   Component: RFVDemoCustomTab,
+    // },
+    // {
+    //   label: "Data Tab Demo", // Navigation Label for the tab
+    //   path: "data-tab", // Subpath for the tab
+    //   Component: DataTab,
+    // },
   ],
   OnDemandFeatureViewCustomTabs: [
-    {
-      label: "Custom Tab Demo",
-      path: "demo-tab",
-      Component: ODFVDemoCustomTab,
-    },
+    // {
+    //   label: "Custom Tab Demo",
+    //   path: "demo-tab",
+    //   Component: ODFVDemoCustomTab,
+    // },
   ],
   StreamFeatureViewCustomTabs: [
-    {
-      label: "Custom Tab Demo",
-      path: "demo-tab",
-      Component: SFVDemoCustomTab,
-    },
+    // {
+    //   label: "Custom Tab Demo",
+    //   path: "demo-tab",
+    //   Component: SFVDemoCustomTab,
+    // },
   ],
   FeatureServiceCustomTabs: [
-    {
-      label: "Custom Tab Demo",
-      path: "fs-demo-tab",
-      Component: FSDemoCustomTab,
-    },
+    // {
+    //   label: "Custom Tab Demo",
+    //   path: "fs-demo-tab",
+    //   Component: FSDemoCustomTab,
+    // },
   ],
   DataSourceCustomTabs: [
-    {
-      label: "Custom Tab Demo",
-      path: "fs-demo-tab",
-      Component: DSDemoCustomTab,
-    },
+    // {
+    //   label: "Custom Tab Demo",
+    //   path: "fs-demo-tab",
+    //   Component: DSDemoCustomTab,
+    // },
   ],
   EntityCustomTabs: [
-    {
-      label: "Custom Tab Demo",
-      path: "demo-tab",
-      Component: EntDemoCustomTab,
-    },
+    // {
+    //   label: "Custom Tab Demo",
+    //   path: "demo-tab",
+    //   Component: EntDemoCustomTab,
+    // },
   ],
   DatasetCustomTabs: [
-    {
-      label: "Custom Tab Demo",
-      path: "demo-tab",
-      Component: DatasetDemoCustomTab,
-    },
+    // {
+    //   label: "Custom Tab Demo",
+    //   path: "demo-tab",
+    //   Component: DatasetDemoCustomTab,
+    // },
   ],
   FeatureCustomTabs: [
-    {
-      label: "Custom Tab Demo",
-      path: "demo-tab",
-      Component: FDemoCustomTab,
-    },
+    // {
+    //   label: "Custom Tab Demo",
+    //   path: "demo-tab",
+    //   Component: FDemoCustomTab,
+    // },
   ],
 };
 
